@@ -79,6 +79,7 @@ contract LendMyNFT is Owner{
     mapping (uint256 => Collateral) stake;  // tokenid to Collateral
     mapping (uint256 => Loan) loans;    // loanId to Loan
     mapping(uint256 => bool) npa;   // loanId to overdue status
+    event Loans(address Borrower, uint256 LoanId);
     struct Collateral {
         IERC721 nftAddress;
         uint256 price ; // in wei
@@ -99,7 +100,7 @@ contract LendMyNFT is Owner{
     function viewInterestRate() public view returns(uint8){
         return interest;
     }
-    function _generateCollateral(IERC721 _nft, uint256 _tokenId, uint256 _price) public {
+    function _generateCollateral(IERC721 _nft, uint256 _tokenId, uint256 _price) internal {
         nft = IERC721(_nft);
         require(nft.ownerOf(_tokenId) == msg.sender, "Only owner of NFT can collateralize");
         stake[_tokenId] = Collateral( nft,_price);
@@ -113,14 +114,18 @@ contract LendMyNFT is Owner{
         loanId++;
         loans[loanId] = Loan(uint32(block.timestamp),_endTime,interest,weiAmount,_tokenId,true);
         npa[loanId] = false;
+        emit Loans(msg.sender,loanId);
         return loanId;
+    }
+    function viewLoan(uint256 _loanId)public view returns(uint32,uint256,uint256,bool){
+        return (loans[_loanId].endTime,loans[_loanId].principal,loans[_loanId].tokenId,loans[_loanId].isActive );
     }
     function rePay(uint256 _loanId) public {
         require(block.timestamp<loans[_loanId].endTime, "Error: Repayment time expired");
         nft = stake[_loanId].nftAddress;
         uint32 elapsedTime = uint32(block.timestamp) - loans[_loanId].startTime;
-        uint256 rePayAmount = loans[_loanId].principal*(1 + loans[_loanId].rate * elapsedTime/(60*60*24*365*100));
-        usdc.transfer(address(this), rePayAmount);
+        uint256 rePayAmount = loans[_loanId].principal + loans[_loanId].principal*loans[_loanId].rate * elapsedTime/(60*60*24*365*100);
+        usdc.transferFrom(msg.sender, address(this), rePayAmount);
         nft.safeTransferFrom(address(this), msg.sender, loans[_loanId].tokenId);
         loans[_loanId].isActive = false;
     }
@@ -144,7 +149,7 @@ contract LendMyNFT is Owner{
     function listNPA(uint256 _noOffResults) public view returns(uint256[] memory){
         uint k;
         uint256[] memory npas = new uint256[](_noOffResults);
-        for(uint i=0;i<=loanId;i++){
+        for(uint i=1;i<=loanId;i++){
             if(k<=_noOffResults){
                 if(npa[i] == true){
                 npas[k] = i;
@@ -159,10 +164,10 @@ contract LendMyNFT is Owner{
         require(npa[_loanId] || _assignAsNPA(_loanId), "This is not a Non Performing Asset" );
         uint32 elapsedTime = uint32(block.timestamp) - loans[_loanId].startTime;
         uint256 rePayAmount = loans[_loanId].principal + loans[_loanId].principal*loans[_loanId].rate * elapsedTime/(60*60*24*365*100);
-        usdc.transfer(address(this), rePayAmount);
+        usdc.transferFrom(msg.sender, address(this), rePayAmount);
         nft = stake[_loanId].nftAddress;
         nft.safeTransferFrom(address(this), msg.sender, loans[_loanId].tokenId);
-        loans[_loanId].isActive = false;       
+        loans[_loanId].isActive = false;
         npa[_loanId] = false;
     }
 
