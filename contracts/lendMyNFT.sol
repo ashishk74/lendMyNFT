@@ -70,7 +70,8 @@ contract LendMyNFT is Owner{
     IERC20 usdc;
 
     constructor () {
-        
+        usdc = IERC20(0xeb8f08a975Ab53E34D8a0330E0D34de942C95926);
+
     }
     uint8 interest;    
     uint256 loanId;
@@ -79,7 +80,7 @@ contract LendMyNFT is Owner{
     mapping (uint256 => Loan) loans;    // loanId to Loan
     mapping(uint256 => bool) npa;   // loanId to overdue status
     struct Collateral {
-
+        IERC721 nftAddress;
         uint256 price ; // in wei
 
     }
@@ -89,6 +90,7 @@ contract LendMyNFT is Owner{
         uint8 rate; // per annum
         uint256 principal;
         uint256 tokenId;
+        bool isActive;
         
     }
     function setInterestRate(uint8 _rate) public isOwner {
@@ -97,37 +99,53 @@ contract LendMyNFT is Owner{
     function viewInterestRate() public view returns(uint8){
         return interest;
     }
-
-    function borrow (uint256 _tokenId, uint32 _endTime) public returns(uint256 LoanId) {
+    function _generateCollateral(IERC721 _nft, uint256 _tokenId, uint256 _price) public {
+        nft = IERC721(_nft);
+        require(nft.ownerOf(_tokenId) == msg.sender, "Only owner of NFT can collateralize");
+        stake[_tokenId] = Collateral( nft,_price);
+    }
+    function borrow (IERC721 _nft,uint256 _tokenId, uint256 _price, uint32 _endTime) public returns(uint256 LoanId) {
+        _generateCollateral(_nft,_tokenId,_price);
         uint256 weiAmount = stake[_tokenId].price *70/100;
+        require(usdc.balanceOf(address(this))>=weiAmount, "Error :: Not enough balance USDC to lend");
         nft.safeTransferFrom(msg.sender,address(this),_tokenId);
         usdc.transfer(msg.sender,weiAmount);
         loanId++;
-        loans[loanId] = Loan(uint32(block.timestamp),_endTime,interest,weiAmount,_tokenId);
+        loans[loanId] = Loan(uint32(block.timestamp),_endTime,interest,weiAmount,_tokenId,true);
         npa[loanId] = false;
         return loanId;
     }
     function rePay(uint256 _loanId) public {
-        require(block.timestamp<loans[_loanId].endTime, "Error: Repay time expired");
+        require(block.timestamp<loans[_loanId].endTime, "Error: Repayment time expired");
+        nft = stake[_loanId].nftAddress;
         uint32 elapsedTime = uint32(block.timestamp) - loans[_loanId].startTime;
         uint256 rePayAmount = loans[_loanId].principal*(1 + loans[_loanId].rate * elapsedTime/(60*60*24*365*100));
         usdc.transfer(address(this), rePayAmount);
         nft.safeTransferFrom(address(this), msg.sender, loans[_loanId].tokenId);
+        loans[_loanId].isActive = false;
     }
-    function assignNPA() public {
+    function _assignAsNPA(uint256 _loanId) internal returns(bool) {
+        require(loans[_loanId].isActive && loans[_loanId].endTime<block.timestamp, "This is not a NPA yet");
+        npa[_loanId] = true;
+        return true;
+    }
+    function assignAllNPA() public {
         
         for(uint256 i = lastCheckedId; i<=loanId;i++){
-            if(loans[i].endTime<block.timestamp){
+            if(loans[i].isActive = true){
+                if(loans[i].endTime<block.timestamp){
                 npa[i] = true;
+                }
             }
+            
         }
         lastCheckedId = loanId;
     }
-    function listNPA(uint256 j) public view returns(uint256[] memory){
+    function listNPA(uint256 _noOffResults) public view returns(uint256[] memory){
         uint k;
-        uint256[] memory npas = new uint256[](j);
+        uint256[] memory npas = new uint256[](_noOffResults);
         for(uint i=0;i<=loanId;i++){
-            if(k<=j){
+            if(k<=_noOffResults){
                 if(npa[i] == true){
                 npas[k] = i;
                 k++;
@@ -136,6 +154,16 @@ contract LendMyNFT is Owner{
             
         }
         return npas;
+    }
+    function liquidateNPA(uint256 _loanId) public {
+        require(npa[_loanId] || _assignAsNPA(_loanId), "This is not a Non Performing Asset" );
+        uint32 elapsedTime = uint32(block.timestamp) - loans[_loanId].startTime;
+        uint256 rePayAmount = loans[_loanId].principal + loans[_loanId].principal*loans[_loanId].rate * elapsedTime/(60*60*24*365*100);
+        usdc.transfer(address(this), rePayAmount);
+        nft = stake[_loanId].nftAddress;
+        nft.safeTransferFrom(address(this), msg.sender, loans[_loanId].tokenId);
+        loans[_loanId].isActive = false;       
+        npa[_loanId] = false;
     }
 
 }
