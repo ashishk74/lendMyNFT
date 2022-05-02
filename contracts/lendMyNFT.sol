@@ -126,6 +126,7 @@ contract LendMyNFT is Owner{
         uint32 elapsedTime = uint32(block.timestamp) - loans[_loanId].startTime;
         uint256 rePayAmount = loans[_loanId].principal + loans[_loanId].principal*loans[_loanId].rate * elapsedTime/(60*60*24*365*100);
         usdc.transferFrom(msg.sender, address(this), rePayAmount);
+        nft.setApprovalForAll(address(this),true);
         nft.safeTransferFrom(address(this), msg.sender, loans[_loanId].tokenId);
         loans[_loanId].isActive = false;
     }
@@ -166,6 +167,7 @@ contract LendMyNFT is Owner{
         uint256 rePayAmount = loans[_loanId].principal + loans[_loanId].principal*loans[_loanId].rate * elapsedTime/(60*60*24*365*100);
         usdc.transferFrom(msg.sender, address(this), rePayAmount);
         nft = stake[_loanId].nftAddress;
+        nft.setApprovalForAll(address(this),true);
         nft.safeTransferFrom(address(this), msg.sender, loans[_loanId].tokenId);
         loans[_loanId].isActive = false;
         npa[_loanId] = false;
