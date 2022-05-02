@@ -1,3 +1,3 @@
 # lendMyNFT
 
-contract deployed on Rinkeby network at 0x5d348811167027f778F9891aEA5511e642d4A631
+contract deployed on Rinkeby network at 0x42121414d09464561c9b66dEb8fc9dc86fF4691b
