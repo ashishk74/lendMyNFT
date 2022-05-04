@@ -86,6 +86,7 @@ contract LendMyNFT is Owner{
 
     }
     struct Loan {
+        address borrower;
         uint32 startTime;
         uint32 endTime;
         uint8 rate; // per annum
@@ -112,7 +113,7 @@ contract LendMyNFT is Owner{
         nft.safeTransferFrom(msg.sender,address(this),_tokenId);
         usdc.transfer(msg.sender,weiAmount);
         loanId++;
-        loans[loanId] = Loan(uint32(block.timestamp),_endTime,interest,weiAmount,_tokenId,true);
+        loans[loanId] = Loan(msg.sender,uint32(block.timestamp),_endTime,interest,weiAmount,_tokenId,true);
         npa[loanId] = false;
         emit Loans(msg.sender,loanId);
         return loanId;
@@ -122,6 +123,8 @@ contract LendMyNFT is Owner{
     }
     function rePay(uint256 _loanId) public {
         require(block.timestamp<loans[_loanId].endTime, "Error: Repayment time expired");
+        require(msg.sender == loans[_loanId].borrower);
+        require(loans[_loanId].isActive, "This loan is no longer active");
         nft = stake[_loanId].nftAddress;
         uint32 elapsedTime = uint32(block.timestamp) - loans[_loanId].startTime;
         uint256 rePayAmount = loans[_loanId].principal + loans[_loanId].principal*loans[_loanId].rate * elapsedTime/(60*60*24*365*100);
@@ -172,5 +175,4 @@ contract LendMyNFT is Owner{
         loans[_loanId].isActive = false;
         npa[_loanId] = false;
     }
-
 }
