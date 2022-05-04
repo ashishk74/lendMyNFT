@@ -1,0 +1,47 @@
+Our smart contract LendMyNFT is scheduled to give 70% loan in USDC to any borrower against NFT as a collateral.
+
+Testing is done on Rinkeby testnet using USDC available from contract address 0xeb8f08a975Ab53E34D8a0330E0D34de942C95926.
+
+LendMyNFT contract is deployed at address : 0xEDCBC604D7D71DEf29E5DccD33Ac6a9F8675aF6D, prefunded by some USDC for lending.
+
+NFT contract is deployed at address : 0xC30bEB6C801bb697836dA563608F930d2e2a386f, minted tokenId # 1.
+
+User address1 : 0x5FF231a79Ff39d0432C62C7f69DFE6dbdfaf8D47, prefunded with Eth to pay for gas fees.
+User address 2 : 0xbAA5c9e78db4448771aC3140d216399e67F35402, prefunded with Eth to pay for gas fees.
+
+// Attempting to repay loan before endtime  .
+
+Transaction # 1 - Borrow ( Tx Hash 0xc6e7740a996f3a386bbda6ff75dc257b87bbf9306ecb0be1ed73a4965ceeb8ed)
+
+User runs the function borrow(), stating the NFT contract address, tokenId (#1, to be staked) , price (0.01,  in USDC) and endTime of loan (1651646525, unix timestamp).
+
+Successful transaction results in 70% of NFT value , 0.007 USDC, transfered to User and NFT transfered to contract account. LoanId #1 generated.
+
+Transaction # 2 - Repay ( Tx Hash 0x10d21d18432ef17a9580d66be05940206132220c1b5e08d10b4901301b685d05)
+
+User runs the function repay(), stating the loanId number.
+
+Successful transaction results in repayamount with interest transfered from user to contract and collateralised NFT transfered from contract to user.
+
+// Attempting to repay loan after endtime  .
+
+Transaction # 3 - Borrow ( Tx Hash 0x46b5bf63519db56fe712fd28fca839c07c056f83693fb723cba0b2eb3b4752ef)
+
+User runs the function borrow(), stating the NFT contract address, tokenId (#1, to be staked) , price (0.01,  in USDC) and endTime of loan (1651644790, unix timestamp).
+
+Successful transaction results in 70% of NFT value , 0.007 USDC, transfered to User and NFT transfered to contract account. LoanId #2 generated.
+
+
+Transaction to attempt to repay after endtime results in revert.
+Transaction # 4 - AssignAllNPA ( Tx Hash 0xa6fbc160a9d089cbc0e6adf9f4b8ded5bec8b3b55ac151c0d0f023daf152ac4f)
+
+Anyone can run this function, assignAllNPA(), to assign all those loans which are not paid on time to be assigned as NPA (Non performing asset)
+
+Transaction # 5 - Liquidate NPA (Tx Hash )
+
+Anyone interested in buying the NPA can pay the principal and interest amount (in USDC) and liquidate the NFT asset.
+
+Successful transaction results in loan amount being transfered from user to contract and collateralised NFT transfered from contract to user.
+
+
+  
