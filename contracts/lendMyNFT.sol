@@ -70,8 +70,8 @@ contract LendMyNFT is Owner{
     IERC20 usdc;
 
     constructor () {
-        //usdc = IERC20(0xeb8f08a975Ab53E34D8a0330E0D34de942C95926);
-        usdc = IERC20(0xd9145CCE52D386f254917e481eB44e9943F39138);
+        usdc = IERC20(0xeb8f08a975Ab53E34D8a0330E0D34de942C95926);// usdc rinkeby
+       // usdc = IERC20(0xd9145CCE52D386f254917e481eB44e9943F39138);
         
     }
     uint8 interest;    
